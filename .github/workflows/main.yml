@@ -58,7 +58,7 @@ jobs:
                   webhook,
                   json={
                       "content":
-                      f"@everyone\n🎥 Neues Video online!\n**{title}**\n{link}"
+                      f"@everyone\n🎥 A new video has been uploaded!\n**{title}**\n{link}"
                   }
               )
 
