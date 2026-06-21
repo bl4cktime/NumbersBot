@@ -1,0 +1,75 @@
+name: YouTube Notifier
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check-video:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhängigkeiten installieren
+        run: pip install feedparser requests
+
+      - name: Script ausführen
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          python << 'EOF'
+          import feedparser
+          import requests
+          import os
+
+          CHANNEL_ID = "DEINE_CHANNEL_ID"
+
+          feed = feedparser.parse(
+              f"https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}"
+          )
+
+          latest = feed.entries[0]
+          video_id = latest.yt_videoid
+          title = latest.title
+          link = latest.link
+
+          try:
+              with open("last_video.txt", "r") as f:
+                  old_id = f.read().strip()
+          except:
+              old_id = ""
+
+          if video_id != old_id:
+
+              webhook = os.environ["DISCORD_WEBHOOK"]
+
+              requests.post(
+                  webhook,
+                  json={
+                      "content":
+                      f"@everyone\n🎥 Neues Video online!\n**{title}**\n{link}"
+                  }
+              )
+
+              with open("last_video.txt", "w") as f:
+                  f.write(video_id)
+          EOF
+
+      - name: Änderungen speichern
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add last_video.txt
+          git commit -m "Update latest video" || exit 0
+          git push
