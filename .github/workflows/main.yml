@@ -39,24 +39,23 @@ jobs:
               f"https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}"
           )
 
-          # 🔐 Safety check
+          # Safety check
           if not feed.entries:
               print("No feed entries found")
               exit(0)
 
           latest = feed.entries[0]
 
-          video_id = getattr(latest, "yt_videoid", None)
           title = latest.title
           link = latest.link
           channel_name = latest.author
 
+          # Video ID safe extraction
+          video_id = getattr(latest, "yt_videoid", None)
           if not video_id:
               video_id = link.split("v=")[-1]
 
           thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
-
-          upload_time = getattr(latest, "published", None)
 
           try:
               with open("last_video.txt", "r") as f:
@@ -76,7 +75,9 @@ jobs:
                           {
                               "title": title,
                               "url": link,
-                              "description": "📺 A new video has just been uploaded on YouTube.",
+
+                              "description": "🎥 A new video has just been uploaded!",
+
                               "color": 0xFF0000,
 
                               "author": {
@@ -84,15 +85,13 @@ jobs:
                                   "url": f"https://www.youtube.com/channel/{CHANNEL_ID}"
                               },
 
-                              "thumbnail": {
+                              "image": {
                                   "url": thumbnail_url
                               },
 
                               "footer": {
-                                  "text": "YouTube Upload Notifier • Auto Update"
-                              },
-
-                              "timestamp": upload_time if upload_time else None
+                                  "text": "YouTube Upload Notifier"
+                              }
                           }
                       ],
                       "allowed_mentions": {
