@@ -33,7 +33,7 @@ jobs:
           import requests
           import os
 
-          CHANNEL_ID = "DEINE_CHANNEL_ID"
+          CHANNEL_ID = "UCCYvaiDx2FDf0clHmxRW2_Q"
 
           feed = feedparser.parse(
               f"https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}"
