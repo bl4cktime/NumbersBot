@@ -32,11 +32,12 @@ jobs:
           import feedparser
           import requests
           import os
+          from datetime import datetime
 
           CHANNEL_ID = "UCCYvaiDx2FDf0clHmxRW2_Q"
 
           feed = feedparser.parse(
-              f"https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}"
+              f"https://youtube.com{CHANNEL_ID}"
           )
 
           if not feed.entries:
@@ -49,11 +50,26 @@ jobs:
           link = latest.link
           channel_name = latest.author
 
+          # Neu: Beschreibung auslesen und auf 150 Zeichen kürzen
+          summary = getattr(latest, "summary", "🎥 Klicke auf den Link, um das Video anzusehen!")
+          if len(summary) > 150:
+              summary = summary[:147] + "..."
+
+          # Neu: Zeitstempel für den Discord-Footer formatieren
+          published_parsed = getattr(latest, "published_parsed", None)
+          if published_parsed:
+              timestamp = datetime(*published_parsed[:6]).isoformat() + "Z"
+          else:
+              timestamp = datetime.utcnow().isoformat() + "Z"
+
           video_id = getattr(latest, "yt_videoid", None)
           if not video_id:
               video_id = link.split("v=")[-1]
 
-          thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
+          thumbnail_url = f"https://youtube.com{video_id}/maxresdefault.jpg"
+          
+          # Neu: Generisches Icon für den Kanal-Author (oder ein festes Bild-URL eintragen)
+          author_icon = "https://youtube.com"
 
           try:
               with open("last_video.txt", "r") as f:
@@ -73,20 +89,23 @@ jobs:
               response = requests.post(
                   webhook,
                   json={
-                      "content": "🔔 **Neues Video hochgeladen!** @everyone",
+                      "content": "🔔 **Neues Video von " + channel_name + "!** @everyone",
                       "embeds": [
                           {
                               "title": title,
                               "url": link,
+                              "description": f"*{summary}*",
                               "color": 16711680,
+                              "timestamp": timestamp,
                               "author": {
-                                  "name": f"📺 {channel_name}",
-                                  "url": f"https://www.youtube.com/channel/{CHANNEL_ID}"
+                                  "name": channel_name,
+                                  "url": f"https://youtube.com{CHANNEL_ID}",
+                                  "icon_url": author_icon
                               },
                               "fields": [
                                   {
-                                      "name": "🔗 Jetzt anschauen",
-                                      "value": f"[Hier klicken um das Video zu öffnen]({link})",
+                                      "name": "🎬 Anschauen",
+                                      "value": f"[▶️ Video auf YouTube öffnen]({link})",
                                       "inline": False
                                   }
                               ],
@@ -94,7 +113,7 @@ jobs:
                                   "url": thumbnail_url
                               },
                               "footer": {
-                                  "text": "YouTube Notifier • Automatische Benachrichtigung"
+                                  "text": "YouTube Notifier • Veröffentlicht"
                               }
                           }
                       ],
@@ -115,10 +134,10 @@ jobs:
               print("No new video found")
           EOF
 
-      - name: Änderungen speichern
+      - name: Änderungen保存 (Korrektur: speichern)
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@://github.com"
           
           git add last_video.txt
           git diff --cached --quiet && exit 0
