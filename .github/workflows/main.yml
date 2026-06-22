@@ -120,14 +120,15 @@ jobs:
           # Datei hinzufügen
           git add last_video.txt
           
-          # Prüfen, ob es überhaupt Änderungen gibt (wenn kein neues Video da ist, hier beenden)
+          # Prüfen, ob es überhaupt Änderungen gibt
           git diff --cached --quiet && exit 0
           
           # Änderungen committen
           git commit -m "Chore: Update latest video ID [skip ci]"
           
-          # Vor dem Push aktuelle Änderungen holen, um Konflikte zu vermeiden
-          git pull --rebase origin main
+          # Aktuelle Änderungen holen. Bei Konflikten die Bot-Version (-X ours) bevorzugen!
+          git pull --rebase -X ours origin main
           
           # Pushen
+          git push origin HEAD:main
           git push origin HEAD:main
