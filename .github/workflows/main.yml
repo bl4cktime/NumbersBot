@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: youtube-notifier
@@ -28,9 +28,8 @@ jobs:
       - name: Video prüfen & Discord senden
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-          LAST_VIDEO_ID: ${{ vars.LAST_VIDEO_ID }}
+          GIST_ID: ${{ secrets.GIST_ID }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
 
         run: |
           python << 'EOF'
@@ -40,12 +39,37 @@ jobs:
 
           CHANNEL_ID = "UCCYvaiDx2FDf0clHmxRW2_Q"
 
+          gist_id = os.environ["GIST_ID"]
+          token = os.environ["GH_TOKEN"]
+
+          gist_api = f"https://api.github.com/gists/{gist_id}"
+
+          headers = {
+              "Authorization": f"Bearer {token}",
+              "Accept": "application/vnd.github+json"
+          }
+
+          # -----------------------
+          # 1. GIST lesen
+          # -----------------------
+          r = requests.get(gist_api, headers=headers)
+          data = r.json()
+
+          old_id = ""
+          try:
+              old_id = data["files"]["last_video.txt"]["content"].strip()
+          except Exception:
+              pass
+
+          # -----------------------
+          # 2. YouTube Feed
+          # -----------------------
           feed = feedparser.parse(
               f"https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}"
           )
 
           if not feed.entries:
-              print("No feed entries found")
+              print("No feed entries")
               exit(0)
 
           latest = feed.entries[0]
@@ -58,67 +82,51 @@ jobs:
           if not video_id:
               video_id = link.split("v=")[-1]
 
-          old_id = os.environ.get("LAST_VIDEO_ID", "")
-
-          print("Current video:", video_id)
-          print("Stored video:", old_id)
+          print("Current:", video_id)
+          print("Stored:", old_id)
 
           if video_id != old_id:
 
               print("New video detected")
 
-              # ✔ stabile Thumbnail-URL (funktioniert fast immer)
               thumbnail_url = f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
 
               webhook = os.environ["DISCORD_WEBHOOK"]
 
-              requests.post(
-                  webhook,
+              requests.post(webhook, json={
+                  "content": "@everyone",
+                  "embeds": [{
+                      "title": title,
+                      "url": link,
+                      "description": "🎥 New YouTube video uploaded!",
+                      "color": 16711680,
+                      "author": {
+                          "name": channel_name,
+                          "url": f"https://www.youtube.com/channel/{CHANNEL_ID}"
+                      },
+                      "image": {
+                          "url": thumbnail_url
+                      }
+                  }],
+                  "allowed_mentions": {"parse": ["everyone"]}
+              })
+
+              # -----------------------
+              # 3. GIST updaten
+              # -----------------------
+              requests.patch(
+                  gist_api,
+                  headers=headers,
                   json={
-                      "content": "@everyone",
-                      "embeds": [
-                          {
-                              "title": title,
-                              "url": link,
-                              "description": "🎥 A new video has just been uploaded! 🎥",
-                              "color": 16711680,
-
-                              "author": {
-                                  "name": channel_name,
-                                  "url": f"https://www.youtube.com/channel/{CHANNEL_ID}"
-                              },
-
-                              "image": {
-                                  "url": thumbnail_url
-                              },
-
-                              "footer": {
-                                  "text": "Numbers Upload Notifier"
-                              }
+                      "files": {
+                          "last_video.txt": {
+                              "content": video_id
                           }
-                      ],
-                      "allowed_mentions": {
-                          "parse": ["everyone"]
                       }
                   }
               )
 
-              print("Discord sent")
-
-              # ✔ Update GitHub Variable (LAST_VIDEO_ID)
-              repo = os.environ["REPO"]
-              token = os.environ["GH_TOKEN"]
-
-              requests.patch(
-                  f"https://api.github.com/repos/{repo}/actions/variables/LAST_VIDEO_ID",
-                  headers={
-                      "Authorization": f"Bearer {token}",
-                      "Accept": "application/vnd.github+json"
-                  },
-                  json={"value": video_id}
-              )
-
-              print("Updated LAST_VIDEO_ID:", video_id)
+              print("Gist updated:", video_id)
 
           else:
               print("No new video")
