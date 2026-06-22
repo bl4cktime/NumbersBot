@@ -117,9 +117,20 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
+          # 1. Erzwinge das Laden des absolut neuesten Stands von GitHub (überschreibt nur Git-History)
+          git fetch origin main
+          
+          # 2. Setze den lokalen Git-Index auf den Stand von GitHub, OHNE deine 'last_video.txt' zu löschen
+          git reset --mixed origin/main
+          
+          # 3. Datei für den Commit vormerken
           git add last_video.txt
+          
+          # 4. Wenn sich die ID im Vergleich zum GitHub-Server NICHT geändert hat -> sauber abbrechen
           git diff --cached --quiet && exit 0
+          
+          # 5. Wenn sie neu ist -> Committen
           git commit -m "Chore: Update latest video ID [skip ci]"
           
-          # Erzwingt den Push und überschreibt Konflikte auf GitHub einfach
-          git push origin HEAD:main --force
+          # 6. Direkt pushen. Da wir auf dem exakt neuesten Stand aufgebaut haben, klappt das reibungslos.
+          git push origin HEAD:main
