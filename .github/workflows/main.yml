@@ -37,14 +37,15 @@ jobs:
           CHANNEL_ID = "UCCYvaiDx2FDf0clHmxRW2_Q"
 
           feed = feedparser.parse(
-              f"https://youtube.com{CHANNEL_ID}"
+              f"https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}"
           )
 
-          if not feed.entries:
+          # Validierung, ob Einträge vorhanden sind und die Liste nicht leer ist
+          if not feed.entries or len(feed.entries) == 0:
               print("Fehler: Keine Eintraege im RSS-Feed gefunden!")
               exit(1)
 
-          # Holt explizit das erste Element (Index Null)
+          # Korrektur: Greift explizit auf das erste Element (Index 0) der Liste zu
           latest_video = feed.entries[0]
 
           title = latest_video.title
@@ -73,9 +74,8 @@ jobs:
           print(f"Aktuelles Video: {video_id}")
           print(f"Gespeichertes Video: {old_id}")
 
-          # ZUM TESTEN: Schickt die Nachricht auch, wenn die ID übereinstimmt!
-          # Sobald alles perfekt ist, ändern wir das "True" wieder zurück.
-          if video_id != old_id or True:
+          # Überprüfung auf neue Video-ID
+          if video_id != old_id:
               print("Sende Benachrichtigung an Discord...")
               webhook = os.environ["DISCORD_WEBHOOK"]
 
@@ -120,10 +120,10 @@ jobs:
               print("Kein neues Video gefunden.")
           EOF
 
-      - name: Änderungen speichern
+      - name: Änderungen保存
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@://github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
           git add last_video.txt
           git diff --cached --quiet && exit 0
