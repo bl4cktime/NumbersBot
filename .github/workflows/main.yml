@@ -127,6 +127,7 @@ jobs:
               )
 
               print("GIST STATUS:", resp.status_code)
+              print("BODY:", resp.text)
               print("GIST RESPONSE:", resp.text)
 
               if resp.status_code != 200:
