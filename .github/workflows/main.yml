@@ -39,7 +39,6 @@ jobs:
               f"https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}"
           )
 
-          # Safety check
           if not feed.entries:
               print("No feed entries found")
               exit(0)
@@ -50,7 +49,6 @@ jobs:
           link = latest.link
           channel_name = latest.author
 
-          # Video ID safe extraction
           video_id = getattr(latest, "yt_videoid", None)
           if not video_id:
               video_id = link.split("v=")[-1]
@@ -63,7 +61,12 @@ jobs:
           except:
               old_id = ""
 
+          print(f"Current video: {video_id}")
+          print(f"Stored video: {old_id}")
+
           if video_id != old_id:
+
+              print("New video detected - sending notification")
 
               webhook = os.environ["DISCORD_WEBHOOK"]
 
@@ -75,10 +78,8 @@ jobs:
                           {
                               "title": title,
                               "url": link,
-
                               "description": "🎥 A new video has just been uploaded!",
-
-                              "color": 0xFF0000,
+                              "color": 16711680,
 
                               "author": {
                                   "name": channel_name,
@@ -102,14 +103,20 @@ jobs:
 
               with open("last_video.txt", "w") as f:
                   f.write(video_id)
+
+              print(f"Saved video ID: {video_id}")
+
+          else:
+              print("No new video found")
           EOF
 
       - name: Änderungen speichern
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git fetch origin main
-          git reset --hard origin/main
+
+          git pull --rebase origin main
+
           git add last_video.txt
           git commit -m "Update latest video" || exit 0
           git push
