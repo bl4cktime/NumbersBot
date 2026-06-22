@@ -89,7 +89,7 @@ jobs:
               response = requests.post(
                   webhook,
                   json={
-                      "content": "🔔 **Neues Video von " + channel_name + "!** @everyone",
+                      "content": "🎥 A new video has just been uploaded from " + channel_name + "!** @everyone",
                       "embeds": [
                           {
                               "title": title,
@@ -134,7 +134,7 @@ jobs:
               print("No new video found")
           EOF
 
-      - name: Änderungen保存 (Korrektur: speichern)
+      - name: Änderungen (Korrektur: speichern)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@://github.com"
