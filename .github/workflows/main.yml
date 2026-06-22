@@ -45,7 +45,7 @@ jobs:
           gist_api = f"https://api.github.com/gists/{gist_id}"
 
           headers = {
-              "Authorization": f"Bearer {token}",
+              "Authorization": f"token {token}",
               "Accept": "application/vnd.github+json"
           }
 
@@ -114,7 +114,7 @@ jobs:
               # -----------------------
               # 3. GIST updaten
               # -----------------------
-              requests.patch(
+              resp = requests.patch(
                   gist_api,
                   headers=headers,
                   json={
@@ -126,7 +126,12 @@ jobs:
                   }
               )
 
-              print("Gist updated:", video_id)
+              print("GIST STATUS:", resp.status_code)
+              print("GIST RESPONSE:", resp.text)
+
+              if resp.status_code != 200:
+                  print("GIST UPDATE FAILED")
+
 
           else:
               print("No new video")
