@@ -32,12 +32,11 @@ jobs:
           import feedparser
           import requests
           import os
-          from datetime import datetime
 
           CHANNEL_ID = "UCCYvaiDx2FDf0clHmxRW2_Q"
 
           feed = feedparser.parse(
-              f"https://youtube.com{CHANNEL_ID}"
+              f"https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}"
           )
 
           if not feed.entries:
@@ -50,26 +49,11 @@ jobs:
           link = latest.link
           channel_name = latest.author
 
-          # Beschreibung auslesen und auf 150 Zeichen kürzen
-          summary = getattr(latest, "summary", "🎥 Klicke auf den Link, um das Video anzusehen!")
-          if len(summary) > 150:
-              summary = summary[:147] + "..."
-
-          # Zeitstempel für den Discord-Footer formatieren
-          published_parsed = getattr(latest, "published_parsed", None)
-          if published_parsed:
-              timestamp = datetime(*published_parsed[:6]).isoformat() + "Z"
-          else:
-              timestamp = datetime.utcnow().isoformat() + "Z"
-
           video_id = getattr(latest, "yt_videoid", None)
           if not video_id:
               video_id = link.split("v=")[-1]
 
-          thumbnail_url = f"https://youtube.com{video_id}/maxresdefault.jpg"
-          
-          # Generisches Icon für den Kanal-Author
-          author_icon = "https://youtube.com"
+          thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
 
           try:
               with open("last_video.txt", "r") as f:
@@ -89,31 +73,25 @@ jobs:
               response = requests.post(
                   webhook,
                   json={
-                      "content": "🔔 **Neues Video von " + channel_name + "!** @everyone",
+                      "content": "@everyone",
                       "embeds": [
                           {
                               "title": title,
                               "url": link,
-                              "description": f"*{summary}*",
+                              "description": "🎥 A new video has just been uploaded! 🎥",
                               "color": 16711680,
-                              "timestamp": timestamp,
+
                               "author": {
                                   "name": channel_name,
-                                  "url": f"https://youtube.com{CHANNEL_ID}",
-                                  "icon_url": author_icon
+                                  "url": f"https://www.youtube.com/channel/{CHANNEL_ID}"
                               },
-                              "fields": [
-                                  {
-                                      "name": "🎬 Anschauen",
-                                      "value": f"[▶️ Video auf YouTube öffnen]({link})",
-                                      "inline": False
-                                  }
-                              ],
+
                               "image": {
                                   "url": thumbnail_url
                               },
+
                               "footer": {
-                                  "text": "YouTube Notifier • Veröffentlicht"
+                                  "text": "YouTube Upload Notifier"
                               }
                           }
                       ],
@@ -137,11 +115,19 @@ jobs:
       - name: Änderungen speichern
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@://github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
+          # Datei hinzufügen
           git add last_video.txt
+          
+          # Prüfen, ob es überhaupt Änderungen gibt (wenn kein neues Video da ist, hier beenden)
           git diff --cached --quiet && exit 0
           
+          # Änderungen committen
           git commit -m "Chore: Update latest video ID [skip ci]"
+          
+          # Vor dem Push aktuelle Änderungen holen, um Konflikte zu vermeiden
           git pull --rebase origin main
+          
+          # Pushen
           git push origin HEAD:main
