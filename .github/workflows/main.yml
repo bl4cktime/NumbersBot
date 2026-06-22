@@ -80,7 +80,7 @@ jobs:
                           {
                               "title": title,
                               "url": link,
-                              "description": "🎥 A new video has just been uploaded!",
+                              "description": "🎥 A new video has just been uploaded! 🎥",
                               "color": 16711680,
 
                               "author": {
@@ -93,7 +93,7 @@ jobs:
                               },
 
                               "footer": {
-                                  "text": "YouTube Upload Notifier"
+                                  "text": "Numbers Upload Notifier"
                               }
                           }
                       ],
