@@ -78,7 +78,7 @@ jobs:
                           {
                               "title": title,
                               "url": link,
-                              "description": "🎥 A new video has just been uploaded! 🎥",
+                              "description": f"🎥 A new video has just been uploaded! 🎥",
                               "color": 16711680,
 
                               "author": {
