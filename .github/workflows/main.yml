@@ -32,11 +32,12 @@ jobs:
           import feedparser
           import requests
           import os
+          from datetime import datetime
 
           CHANNEL_ID = "UCCYvaiDx2FDf0clHmxRW2_Q"
 
           feed = feedparser.parse(
-              f"https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}"
+              f"https://youtube.com{CHANNEL_ID}"
           )
 
           if not feed.entries:
@@ -49,11 +50,19 @@ jobs:
           link = latest.link
           channel_name = latest.author
 
+          # Veröffentlichungszeitpunkt auslesen und für Discord formatieren
+          published_parsed = getattr(latest, "published_parsed", None)
+          if published_parsed:
+              timestamp = datetime(*published_parsed[:6]).isoformat() + "Z"
+          else:
+              timestamp = datetime.utcnow().isoformat() + "Z"
+
           video_id = getattr(latest, "yt_videoid", None)
           if not video_id:
               video_id = link.split("v=")[-1]
 
-          thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
+          # maxresdefault für die beste Bildqualität des Thumbnails
+          thumbnail_url = f"https://youtube.com{video_id}/maxresdefault.jpg"
 
           try:
               with open("last_video.txt", "r") as f:
@@ -65,49 +74,49 @@ jobs:
           print(f"Stored video: {old_id}")
 
           if video_id != old_id:
-
               print("New video detected - sending notification")
-
               webhook = os.environ["DISCORD_WEBHOOK"]
 
-              response = requests.post(
-                  webhook,
-                  json={
-                      "content": "@everyone",
-                      "embeds": [
-                          {
-                              "title": title,
-                              "url": link,
-                              "description": "🎥 A new video has just been uploaded!",
-                              "color": 16711680,
-
-                              "author": {
-                                  "name": channel_name,
-                                  "url": f"https://www.youtube.com/channel/{CHANNEL_ID}"
-                              },
-
-                              "image": {
-                                  "url": thumbnail_url
-                              },
-
-                              "footer": {
-                                  "text": "YouTube Upload Notifier"
+              # Verschönertes Embed-Layout für Discord
+              payload = {
+                  "content": "🔔 **Neues Video hochgeladen!** @everyone",
+                  "embeds": [
+                      {
+                          "title": title,
+                          "url": link,
+                          "color": 16711680,  # YouTube Rot
+                          "timestamp": timestamp,
+                          "author": {
+                              "name": f"📺 {channel_name}",
+                              "url": f"https://youtube.com{CHANNEL_ID}"
+                          },
+                          "fields": [
+                              {
+                                  "name": "🔗 Jetzt anschauen",
+                                  "value": f"[Hier klicken um das Video zu öffnen]({link})",
+                                  "inline": False
                               }
+                          ],
+                          "image": {
+                              "url": thumbnail_url
+                          },
+                          "footer": {
+                              "text": "YouTube Notifier • Automatische Benachrichtigung"
                           }
-                      ],
-                      "allowed_mentions": {
-                          "parse": ["everyone"]
                       }
+                  ],
+                  "allowed_mentions": {
+                      "parse": ["everyone"]
                   }
-              )
+              }
 
+              response = requests.post(webhook, json=payload)
               print("Discord status:", response.status_code)
 
               with open("last_video.txt", "w") as f:
                   f.write(video_id)
 
               print(f"Saved video ID: {video_id}")
-
           else:
               print("No new video found")
           EOF
@@ -115,19 +124,15 @@ jobs:
       - name: Änderungen speichern
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@://github.com"
           
-          # Datei hinzufügen
           git add last_video.txt
           
-          # Prüfen, ob es überhaupt Änderungen gibt (wenn kein neues Video da ist, hier beenden)
+          # Wenn sich die Video-ID nicht geändert hat, beende hier ohne Fehler
           git diff --cached --quiet && exit 0
           
-          # Änderungen committen
           git commit -m "Chore: Update latest video ID [skip ci]"
           
-          # Vor dem Push aktuelle Änderungen holen, um Konflikte zu vermeiden
+          # Vor dem Push die neuesten Änderungen holen, um Konflikte zu vermeiden
           git pull --rebase origin main
-          
-          # Pushen
           git push origin HEAD:main
